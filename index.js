@@ -1,5 +1,6 @@
 const net = require('net');
 const { Client } = require('ssh2');
+const { TunnelObject } = require("./classes");
 
 
 function autoClose(server, connection) {
@@ -52,24 +53,19 @@ async function createTunnel(tunnelOptions, serverOptions, sshOptions, forwardOpt
         } catch (e) {
             return reject(e);
         }
+        const tunnelObject = new TunnelObject(server, conn, tunnelOptions.keepAlive === true);
         server.on('connection', (connection) => {
 
             if (tunnelOptions.autoClose) {
                 autoClose(server, connection);
             }
 
-            conn.forwardOut(
-                forwardOptions.srcAddr,
-                forwardOptions.srcPort,
-                forwardOptions.dstAddr,
-                forwardOptions.dstPort, (err, stream) => {
-                    connection.pipe(stream).pipe(connection);
-                });
+            tunnelObject.forwardOut(forwardOptions, connection);
 
         });
 
         server.on('close', () => conn.end());
-        resolve([server, conn]);
+        resolve(tunnelObject);
     });
 }
 
