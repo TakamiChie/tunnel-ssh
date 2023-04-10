@@ -6,8 +6,9 @@ const { setTimeout } = require("timers/promises");
 class TunnelObject{
   #server;
   #client;
-  #reconnect;
+  #tunnelOptions;
   #connecting;
+  #connectionCloseEventListeners;
   /**
    * Error messages that need to be reconnected
    */
@@ -16,13 +17,18 @@ class TunnelObject{
    * 
    * @param {net.Server} serverSocket Server object.
    * @param {ssh2.Client} clientSocket Client object.
-   * @param {Boolean} reconnect `Shutdown()` If the client is disconnected before calling, specify true when connecting automatically.
+   * @param {obhect} Objects indicating tunnel options
+   *  * {boolean} autoClose Whether the server will end the connection when cutting the client. If `autoReconnect` is True, this option is ignored.
+   *  * {boolean} autoReconnect `close()` When the connection is disconnected before calling, whether to retry the connection as an unexpected cutting.
+   *  * {number} autoReconnectCount In the case of `autoReconnect = true`, the number of times to try reconnection. Exceptions occur when this number is exceeded.
    */
-  constructor(serverSocket, clientSocket, reconnect){
+  constructor(serverSocket, clientSocket, tunnelOptions){
     this.#server = serverSocket;
     this.#client = clientSocket;
-    this.#reconnect = reconnect;
+    this.#tunnelOptions = tunnelOptions;
     this.#connecting = false;
+    this.#connectionCloseEventListeners = new Set();
+    this.addConnectionCloseEventListener(this.#onConnectionClose());
   }
 
   /**
@@ -35,11 +41,45 @@ class TunnelObject{
   get client() { return this.#client; }
   
   /**
+   * Add an event handler called at the time of connection close.
+   * @param {EventListener} listener Event listener that processes the connection end event
+   */
+  addConnectionCloseEventListener(listener)
+  {
+    this.#connectionCloseEventListeners.add(listener);
+  }
+
+  /**
+   * Remove an event handler called at the time of connection close.
+   * @param {EventListener} listener Event listener that processes the connection end event
+   */
+  removeConnectionCloseEventListener(listener)
+  {
+    this.#connectionCloseEventListeners.delete(listener);
+  }
+
+  /**
+   * Event handler called when the connection is disconnected.
+   */
+  #onConnectionClose()
+  {
+    if(this.#tunnelOptions.autoClose)
+    {
+      server.getConnections((error, count) => {
+        if (count === 0) {
+          server.close();
+        }
+      });
+    }
+  }
+
+  /**
    * Start transfer processing.
    * @param {ForwardOptions} forwardOptions Transfer options
    * @param {ssh2.Client} connection SSH Connection
    */
   async forwardOut(forwardOptions, connection){
+    connection.on('close', () => { for(let l of this.#connectionCloseEventListeners){ l(this); } });
     this.#connecting = true;
     try {
       this.client.forwardOut(
