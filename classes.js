@@ -28,7 +28,7 @@ class TunnelObject{
     this.#tunnelOptions = tunnelOptions;
     this.#connecting = false;
     this.#connectionCloseEventListeners = new Set();
-    this.addConnectionCloseEventListener(this.#onConnectionClose());
+    this.addConnectionCloseEventListener(this.#onConnectionClose);
   }
 
   /**
@@ -60,10 +60,11 @@ class TunnelObject{
 
   /**
    * Event handler called when the connection is disconnected.
+   * @param {TunnelObject} tunnelObject Tunnel object.
    */
-  #onConnectionClose()
+  #onConnectionClose(tunnelObject)
   {
-    if(this.#tunnelOptions.autoClose)
+    if(tunnelObject.#tunnelOptions.autoClose)
     {
       server.getConnections((error, count) => {
         if (count === 0) {
