@@ -50,7 +50,7 @@ async function createTunnel(tunnelOptions, serverOptions, sshOptions, forwardOpt
         });
 
         server.on('close', () => conn.end());
-        resolve(tunnelObject);
+        resolve([tunnelObject.server, tunnelObject.client, tunnelObject]);
     });
 }
 
