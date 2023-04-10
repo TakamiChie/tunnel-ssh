@@ -90,7 +90,7 @@ class TunnelObject{
             connection.pipe(stream).pipe(connection);
         });
     } catch (error) {
-      if(this.#connecting && this.#reconnect && this.RECONNECT_MESSAGES.includes(error.message)){
+      if(this.#connecting && this.#tunnelOptions.autoReconnect && this.RECONNECT_MESSAGES.includes(error.message)){
         this.server.close();
         this.client.end();
         await setTimeout(100);
